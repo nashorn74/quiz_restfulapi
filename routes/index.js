@@ -8,6 +8,8 @@ router.get('/', function(req, res, next) {
 
 //////////////////////////////////////////////////////////
 
+var request = require('request');
+
 router.get('/qna', function(req,res) {
 	var obj = [{
 	   "id": 1,
@@ -86,6 +88,37 @@ router.post('/qna', function(req, res) {
 	};
 
 	res.send(obj);
+});
+
+router.post('/qna/:id/export', function(req, res) {
+	console.log(req.params.id);
+
+	request (
+		{
+			url: 'https://k8qs29zhf7.execute-api.ap-northeast-2.amazonaws.com/dev/import?key=7259cb1f',
+			method: 'POST',
+			headers: [
+				{
+				  name: 'content-type',
+				  value: 'application/json'
+				}
+			],
+			body: JSON.stringify(
+				{
+				  id: 2,
+				  title: "some title",
+				  body: "some value"
+				})
+		}, function(err,httpResponse,body){ 
+		if(httpResponse.statusCode == 204){
+	    	console.log('OK!')
+	    	res.send({result:true});
+		} else {
+	    	console.log('error: '+ httpResponse.statusCode)
+	    	console.log(body)
+	    	res.send({result:false,error:httpResponse.statusCode});
+	    }
+	});
 });
 
 router.put('/qna/:id', function(req, res) {
