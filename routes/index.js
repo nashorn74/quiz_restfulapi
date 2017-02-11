@@ -12,32 +12,45 @@ var request = require('request');
 var MongoClient = require('mongodb').MongoClient; 
 // Connection URL 
 var url = 'mongodb://localhost:27017/quiz';
+const redis = require('redis');  
+const client = redis.createClient(); 
 
 router.get('/qna', function(req,res) {
-	console.log(req.query.count);
-	console.log(req.query.page);
-	MongoClient.connect(url, function(err, db) {
-		console.log("Connected correctly to server");
-		if (err) {
-			res.send({result:false,err:err});
-		} else {
-			var count = Number(req.query.count);
-			var page = Number(req.query.page);
-			var skip = (page-1)*count;
-			console.log(skip);
-			console.log(count);
-			var qna = db.collection('qna');
-			qna.find({}, {skip:skip,limit:count}).sort({createdAt:-1})
-				.toArray(function(err, results) {
-			    if (err) {
-			    	res.send({result:false,err:err});
-			    } else {
-			    	res.send(results);
-			    }
-			});
-		}
-		db.close();
-	});
+	console.log(JSON.stringify(req.query));
+	client.get(JSON.stringify(req.query), function (err, data) {
+        if (err) {
+        	res.send({result:false,err:err});
+        } else {
+        	if (data != null) {
+        		console.log("Redis data response...")
+	            res.send(JSON.parse(data));
+	        } else {
+	            MongoClient.connect(url, function(err, db) {
+					console.log("Connected correctly to server");
+					if (err) {
+						res.send({result:false,err:err});
+					} else {
+						var count = Number(req.query.count);
+						var page = Number(req.query.page);
+						var skip = (page-1)*count;
+						console.log(skip);
+						console.log(count);
+						var qna = db.collection('qna');
+						qna.find({}, {skip:skip,limit:count}).sort({createdAt:-1})
+							.toArray(function(err, results) {
+						    if (err) {
+						    	res.send({result:false,err:err});
+						    } else {
+						    	client.setex(JSON.stringify(req.query), 300, JSON.stringify(results));
+						    	res.send(results);
+						    }
+						});
+					}
+					db.close();
+				});
+	        }
+        }
+    });
 });
 
 router.get('/qna.csv', function(req, res) {
