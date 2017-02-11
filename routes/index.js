@@ -9,31 +9,35 @@ router.get('/', function(req, res, next) {
 //////////////////////////////////////////////////////////
 
 var request = require('request');
+var MongoClient = require('mongodb').MongoClient; 
+// Connection URL 
+var url = 'mongodb://localhost:27017/quiz';
 
 router.get('/qna', function(req,res) {
-	var obj = [{
-	   "id": 1,
-	   "title": "Lorem ipsum",
-	   "createdAt": "2017-02-09T20:47:46.677Z",
-	   "updatedAt": "2017-02-09T20:47:46.677Z",
-	   "body": "The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog",
-	   "answers": [{
-	     "lawyer": "홍길동",
-	     "body": "The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog"
-	   }]
-	 }, {
-	  "id": 2,
-	  "title": "Lorem ipsum",
-	  "createdAt": "2017-02-09T20:47:46.677Z",
-	  "updatedAt": "2017-02-09T20:47:46.677Z",
-	  "body": "The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog",
-	  "answers": [{
-	    "lawyer": "홍길동",
-	    "body": "The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog"
-	  }]
-	}];
-
-	res.send(obj);
+	console.log(req.query.count);
+	console.log(req.query.page);
+	MongoClient.connect(url, function(err, db) {
+		console.log("Connected correctly to server");
+		if (err) {
+			res.send({result:false,err:err});
+		} else {
+			var count = Number(req.query.count);
+			var page = Number(req.query.page);
+			var skip = (page-1)*count;
+			console.log(skip);
+			console.log(count);
+			var qna = db.collection('qna');
+			qna.find({}, {skip:skip,limit:count}).sort({createdAt:-1})
+				.toArray(function(err, results) {
+			    if (err) {
+			    	res.send({result:false,err:err});
+			    } else {
+			    	res.send(results);
+			    }
+			});
+		}
+		db.close();
+	});
 });
 
 router.get('/qna.csv', function(req, res) {
@@ -75,19 +79,25 @@ router.get('/qna/:id', function(req, res) {
 });
 
 router.post('/qna', function(req, res) {
-	var obj = {
-	  "id": 1,
-	  "title": "Lorem ipsum",
-	  "createdAt": "2017-02-09T20:47:46.677Z",
-	  "updatedAt": "2017-02-09T20:47:46.677Z",
-	  "body": "The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog",
-	  "answers": [{
-	    "lawyer": "홍길동",
-	    "body": "The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog, The quick brown fox jumps over lazy dog"
-	  }]
-	};
-
-	res.send(obj);
+	console.log(req.body);
+	MongoClient.connect(url, function(err, db) {
+		console.log("Connected correctly to server");
+		if (err) {
+			res.send({result:false,err:err});
+		} else {
+			var qna = db.collection('qna');
+		    req.body.createdAt = new Date();
+		    req.body.updatedAt = new Date();
+			qna.save(req.body, function(err, result) {
+			    if (err) {
+			    	res.send({result:false,err:err});
+			    } else {
+			    	res.send(req.body);
+			    }
+			    db.close();
+			});
+		}
+	});
 });
 
 router.post('/qna/:id/export', function(req, res) {
